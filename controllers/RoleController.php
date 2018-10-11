@@ -3,19 +3,30 @@ namespace controllers;
 
 use models\Role;
 
-class RoleController{
+class RoleController extends BaseController{
     // 列表页
     public function index()
     {
         $model = new Role;
-        $data = $model->findAll();
+        $data = $model->findAll([
+            'fields'=>'a.*,GROUP_CONCAT(c.pri_name) pri_list',
+            'join'=>' a LEFT JOIN role_privlege b ON a.id=b.role_id LEFT JOIN privilege c ON b.pri_id=c.id ',
+            'groupby'=>' GROUP BY a.id ',
+        ]);
         view('role/index', $data);
     }
 
     // 显示添加的表单
     public function create()
     {
-        view('role/create');
+        // 取出所有的权限
+        $priModel = new \models\Privilege;
+        // 获取树形数据（递归排序好的）
+        $data = $priModel->tree();
+        // 显示表单
+        view('role/create', [
+            'data' => $data,
+        ]);
     }
 
     // 处理添加表单
@@ -32,8 +43,21 @@ class RoleController{
     {
         $model = new Role;
         $data=$model->findOne($_GET['id']);
+
+        // 取出权限的数据
+        $priModel = new \models\Privilege;
+        // 获取树形数据（递归排序好的）
+        $priData = $priModel->tree();
+        // 取出这个角色所拥有的权限ID
+        $priIds = $model->getPriIds($_GET['id']);
+        // echo '<pre>';
+        // var_dump( $priIds );
+
+
         view('role/edit', [
-            'data' => $data,    
+            'data' => $data,
+            'priData'=>$priData,
+            'priIds'=>$priIds  
         ]);
     }
 
